@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from seed import create_tables
@@ -12,17 +13,20 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+_origins_env = os.getenv("ALLOWED_ORIGINS", "*").strip()
+allowed_origins = ["*"] if _origins_env == "*" else [o.strip() for o in _origins_env.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
-    allow_credentials=True,
+    allow_origins=allowed_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 @app.get("/")
 async def root():
-    return {"message": "Semana Santa Sevilla API"}
+    return {"message": "Semana Santa Sevilla"}
 
 app.include_router(dias.router, prefix="/api/v1/dias", tags=["Días"])
 app.include_router(hermandades.router, prefix="/api/v1/hermandades", tags=["Hermandades"])
