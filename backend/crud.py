@@ -2,6 +2,8 @@ from sqlalchemy.orm import Session
 from typing import List, Optional
 import models
 import schemas
+import os
+import google.generativeai as genai
 from hashing import get_password_hash, verify_password
 from datetime import time
 
@@ -294,7 +296,41 @@ def delete_noticia(db: Session, noticia_id: int) -> bool:
         return True
     return False
 
+#Resumen IA
+GEMINI_MODEL = "gemini-flash-latest"
 
+SYSTEM_INSTRUCTION = (
+    "Eres un experto en la Semana Santa de Sevilla. "
+    "Respondes siempre en español, de forma impersonal e informativa."
+)
+PROMPT_RESUMEN = (
+    "Genera un resumen breve y claro de unas 10-15 líneas de las siguientes noticias "
+    "relacionadas con la Semana Santa en Sevilla. No inventes datos que no aparezcan en las noticias."
+)
+
+def create_resumen(db: Session) -> dict:
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("Falta la clave de la API de Gemini")
+
+    noticias = get_noticias(db, limit=30)
+    if not noticias:
+        return {"resumen": "No hay noticias disponibles para resumir.", "modelo": GEMINI_MODEL}
+
+    bloque = "\n\n".join(f"- {n.titular}: {n.contenido}" for n in noticias)
+
+    try:
+        genai.configure(api_key=api_key)
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL,
+            system_instruction=SYSTEM_INSTRUCTION,
+        )
+        response = model.generate_content(f"{PROMPT_RESUMEN}\n\nNoticias:\n{bloque}")
+        texto = (response.text or "").strip()
+        return {"resumen": texto, "modelo": GEMINI_MODEL}
+    except Exception as e:
+        raise RuntimeError(f"Error llamando a Gemini: {e}")
+    
 #Emisora
 def get_emisora(db: Session, emisora_id: int) -> Optional[models.Emisora]:
     return db.query(models.Emisora).filter(models.Emisora.id == emisora_id).first()

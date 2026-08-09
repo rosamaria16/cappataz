@@ -186,7 +186,10 @@ class NoticiaResponse(NoticiaBase):
     class Config:
         from_attributes = True
 
-
+class ResumenResponse(BaseModel):
+    resumen: str
+    modelo: str
+    
 #Emisora
 class EmisoraBase(BaseModel):
     nombre: str
