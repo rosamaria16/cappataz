@@ -58,4 +58,18 @@ class Noticia {
       throw Exception(e.toString().replaceFirst('Exception: ', ''));
     }
   }
+
+  static Future<String> generarResumen() async {
+  final response = await http.get(
+    Uri.parse('$apiBaseUrl/noticias/summary'),
+  ).timeout(const Duration(seconds: 30), onTimeout: () {
+    throw Exception('Tiempo de conexión agotado');
+  });
+
+  if (response.statusCode == 200) {
+    final data = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
+    return data['resumen']?.toString() ?? '';
+  }
+  throw Exception('No se pudo generar el resumen (${response.statusCode})');
+}
 }

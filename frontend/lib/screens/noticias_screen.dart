@@ -68,22 +68,134 @@ class _NoticiasScreenState extends State<NoticiasScreen> {
       );
     }
 
-    return RefreshIndicator(
-      color: AppColors.primary,
-      onRefresh: _cargarNoticias,
-      child: ListView.separated(
-        padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
-        itemCount: _noticias.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 12),
-        itemBuilder: (context, index) => _NewsCard(noticia: _noticias[index]),
+    return Scaffold(
+      body: RefreshIndicator(
+        color: AppColors.primary,
+        onRefresh: _cargarNoticias,
+        child: ListView.separated(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 24),
+          itemCount: _noticias.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 12),
+          itemBuilder: (context, index) => _TarjetaNoticia(noticia: _noticias[index]),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: AppColors.primary,
+        foregroundColor: AppColors.accent,
+        child: const Icon(Icons.auto_awesome),
+        onPressed: () => _mostrarResumen(context),
+      ),
+    );
+  }
+
+  Future<void> _mostrarResumen(BuildContext context) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(child: CircularProgressIndicator()),
+    );
+    try {
+      final resumen = await Noticia.generarResumen();
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        showDragHandle: true,
+        backgroundColor: AppColors.surface,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (_) => _ResumenIA(resumen: resumen),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      Navigator.of(context).pop();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+      );
+    }
+  }
+}
+
+class _ResumenIA extends StatelessWidget {
+  final String resumen;
+  const _ResumenIA({required this.resumen});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.6,
+      minChildSize: 0.4,
+      maxChildSize: 0.9,
+      builder: (context, scrollController) => SingleChildScrollView(
+        controller: scrollController,
+        padding: const EdgeInsets.fromLTRB(24, 4, 24, 32),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.auto_awesome, color: AppColors.accent, size: 22),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'Resumen de las noticias',
+                    style: TextStyle(
+                      color: AppColors.textPrimary,
+                      fontFamily: AppFonts.serif,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Generado con IA',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Divider(color: AppColors.divider, thickness: 1),
+            ),
+            Text(
+              resumen,
+              style: const TextStyle(
+                color: AppColors.textPrimary,
+                fontFamily: AppFonts.serif,
+                fontSize: 18,
+                height: 1.6,
+              ),
+            ),
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Divider(color: AppColors.divider, thickness: 1),
+            ),
+            const Text(
+              'Para reportar cualquier incidencia o contenido inapropiado, contactar con rosespmar@alum.us.es',
+              style: TextStyle(
+                color: AppColors.textSecondary,
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 }
 
-class _NewsCard extends StatelessWidget {
+class _TarjetaNoticia extends StatelessWidget {
   final Noticia noticia;
-  const _NewsCard({required this.noticia});
+  const _TarjetaNoticia({required this.noticia});
 
   @override
   Widget build(BuildContext context) {
@@ -101,7 +213,7 @@ class _NewsCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _NewsImage(url: noticia.urlImagen, height: 190),
+            _ImagenNoticia(url: noticia.urlImagen, height: 190),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
               child: Column(
@@ -119,7 +231,7 @@ class _NewsCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  _NewsMetadata(noticia: noticia),
+                  _MetadatosNoticia(noticia: noticia),
                 ],
               ),
             ),
@@ -182,9 +294,9 @@ class NoticiaDetalleScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    _NewsMetadata(noticia: noticia, showHora: true, showOrigen: false),
+                    _MetadatosNoticia(noticia: noticia, showHora: true, showOrigen: false),
                     const SizedBox(height: 20),
-                    _NewsImage(url: noticia.urlImagen, height: 245),
+                    _ImagenNoticia(url: noticia.urlImagen, height: 245),
                     const SizedBox(height: 22),
                     Text(
                       noticia.contenido,
@@ -206,12 +318,12 @@ class NoticiaDetalleScreen extends StatelessWidget {
   }
 }
 
-class _NewsMetadata extends StatelessWidget {
+class _MetadatosNoticia extends StatelessWidget {
   final Noticia noticia;
   final bool showHora;
   final bool showOrigen;
 
-  const _NewsMetadata({required this.noticia, this.showHora = false, this.showOrigen = true});
+  const _MetadatosNoticia({required this.noticia, this.showHora = false, this.showOrigen = true});
 
   @override
   Widget build(BuildContext context) {
@@ -237,23 +349,23 @@ class _NewsMetadata extends StatelessWidget {
   }
 }
 
-class _NewsImage extends StatelessWidget {
+class _ImagenNoticia extends StatelessWidget {
   final String url;
   final double height;
 
-  const _NewsImage({required this.url, required this.height});
+  const _ImagenNoticia({required this.url, required this.height});
 
   @override
   Widget build(BuildContext context) {
     if (url.trim().isEmpty) {
-      return _NewsImageFallback(height: height);
+      return _ImagenNoticiaFallback(height: height);
     }
 
     return Image.network(
       url,
       height: height,
       fit: BoxFit.cover,
-      errorBuilder: (_, __, ___) => _NewsImageFallback(height: height),
+      errorBuilder: (_, __, ___) => _ImagenNoticiaFallback(height: height),
       loadingBuilder: (context, child, loadingProgress) {
         if (loadingProgress == null) return child;
         return SizedBox(
@@ -265,10 +377,10 @@ class _NewsImage extends StatelessWidget {
   }
 }
 
-class _NewsImageFallback extends StatelessWidget {
+class _ImagenNoticiaFallback extends StatelessWidget {
   final double height;
 
-  const _NewsImageFallback({required this.height});
+  const _ImagenNoticiaFallback({required this.height});
 
   @override
   Widget build(BuildContext context) {
