@@ -1,0 +1,15 @@
+[build]
+  base = "frontend"
+  publish = "build/web"
+  command = """
+git clone https://github.com/flutter/flutter.git --depth 1 -b stable $HOME/flutter
+export PATH="$HOME/flutter/bin:$PATH"
+flutter --version
+flutter pub get
+flutter build web --release --dart-define=API_BASE_URL=https://ssanta-sevilla-app.fastapicloud.dev/api/v1
+"""
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
