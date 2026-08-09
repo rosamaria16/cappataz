@@ -186,17 +186,21 @@ def clear_seed_tables(db):
     
     
 def reset_auto_increment(db):
-    db.execute(text("ALTER TABLE dias_itinerario AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE items_itinerario AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE itinerarios AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE infopaso AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE hermandades AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE dias AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE noticias AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE emisoras AUTO_INCREMENT = 1"))
-    db.execute(text("ALTER TABLE usuarios AUTO_INCREMENT = 1"))
+    tablas = [
+        "dias_itinerario", "items_itinerario", "itinerarios", "infopaso",
+        "hermandades", "dias", "noticias", "emisoras", "usuarios",
+    ]
+    dialecto = db.get_bind().dialect.name
+    for tabla in tablas:
+        if dialecto == "postgresql":
+            db.execute(text(
+                f"SELECT setval(pg_get_serial_sequence('{tabla}', 'id'), "
+                f"COALESCE((SELECT MAX(id) FROM {tabla}), 1))"
+            ))
+        elif dialecto == "mysql":
+            db.execute(text(f"ALTER TABLE {tabla} AUTO_INCREMENT = 1"))
     db.commit()
-    print("Reset AUTO_INCREMENT counters")
+    print("Reset ID counters")
 
 
 def create_tables():
@@ -209,7 +213,6 @@ def seed_database():
     db = SessionLocal()
     try:
         clear_seed_tables(db)
-        reset_auto_increment(db)
         load_dias(db)
         load_hermandades(db)
         load_infopasos(db)
@@ -219,6 +222,7 @@ def seed_database():
         load_itinerarios(db)
         load_items_itinerario(db)
         db.commit()
+        reset_auto_increment(db)
     except Exception as e:
         db.rollback()
         print(f"Error: {e}")
