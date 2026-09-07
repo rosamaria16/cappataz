@@ -95,7 +95,7 @@ class _NoticiasScreenState extends State<NoticiasScreen> {
       builder: (_) => const Center(child: CircularProgressIndicator()),
     );
     try {
-      final resumen = await Noticia.generarResumen();
+      final resumen = await Noticia.getResumen();
       if (!context.mounted) return;
       Navigator.of(context).pop();
       showModalBottomSheet(

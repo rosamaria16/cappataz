@@ -16,7 +16,6 @@ def _get_database_url() -> str:
             return url.replace("postgresql://", "postgresql+psycopg://", 1)
         return url
 
-    # Fallback local: construye la URL de MySQL a partir de variables sueltas
     user = os.getenv("DB_USER")
     password = os.getenv("DB_PASSWORD")
     host = os.getenv("DB_HOST")

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import '../services/usuario_service.dart';
 import '../services/admin_service.dart';
+import '../services/noticias_service.dart';
 import '../utils/app_theme.dart';
 import '../utils/app_message.dart';
 
@@ -32,17 +33,27 @@ class _AdminScreenState extends State<AdminScreen>
   bool _mensajeDiasError = false;
   Timer? _timerDias;
 
+  List<Noticia> _noticias = [];
+  bool _cargandoNoticias = false;
+  int? _eliminandoNoticiaId;
+  bool _regenerandoResumen = false;
+  String? _mensajeNoticias;
+  bool _mensajeNoticiasError = false;
+  Timer? _timerNoticias;
+
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 3, vsync: this);
     _cargarDias();
+    _cargarNoticias();
   }
 
   @override
   void dispose() {
     _timerCsv?.cancel();
     _timerDias?.cancel();
+    _timerNoticias?.cancel();
     _tabController.dispose();
     super.dispose();
   }
@@ -67,6 +78,169 @@ class _AdminScreenState extends State<AdminScreen>
     _timerDias = Timer(const Duration(seconds: 10), () {
       if (mounted) setState(() => _mensajeDias = null);
     });
+  }
+
+  void _showNoticiasMessage(String text, {bool isError = false}) {
+    _timerNoticias?.cancel();
+    setState(() {
+      _mensajeNoticias = text;
+      _mensajeNoticiasError = isError;
+    });
+    _timerNoticias = Timer(const Duration(seconds: 10), () {
+      if (mounted) setState(() => _mensajeNoticias = null);
+    });
+  }
+
+  Future<void> _cargarNoticias() async {
+    setState(() {
+      _cargandoNoticias = true;
+      _mensajeNoticias = null;
+    });
+
+    try {
+      final noticias = await Noticia.getNoticias();
+      if (mounted) {
+        setState(() {
+          _noticias = noticias;
+          _cargandoNoticias = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _cargandoNoticias = false);
+        _showNoticiasMessage(e.toString().replaceFirst('Exception: ', ''), isError: true);
+      }
+    }
+  }
+
+  Future<void> _regenerarResumen() async {
+    setState(() {
+      _regenerandoResumen = true;
+      _mensajeNoticias = null;
+    });
+
+    try {
+      await AdminService.regenerarResumen();
+      if (mounted) {
+        setState(() => _regenerandoResumen = false);
+        _showNoticiasMessage('Resumen regenerado correctamente');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _regenerandoResumen = false);
+        _showNoticiasMessage(e.toString().replaceFirst('Exception: ', ''), isError: true);
+      }
+    }
+  }
+
+  Future<void> _eliminarNoticia(Noticia noticia) async {
+    final confirmado = await _confirmarEliminarNoticia(noticia);
+    if (confirmado != true) return;
+
+    setState(() {
+      _eliminandoNoticiaId = noticia.id;
+      _mensajeNoticias = null;
+    });
+
+    try {
+      await AdminService.deleteNoticia(noticia.id);
+      if (mounted) {
+        setState(() {
+          _noticias.removeWhere((n) => n.id == noticia.id);
+          _eliminandoNoticiaId = null;
+        });
+        _showNoticiasMessage('Noticia eliminada correctamente');
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _eliminandoNoticiaId = null);
+        _showNoticiasMessage(e.toString().replaceFirst('Exception: ', ''), isError: true);
+      }
+    }
+  }
+
+  Future<bool?> _confirmarEliminarNoticia(Noticia noticia) {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => Dialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Eliminar noticia',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: AppColors.textSecondary),
+                    onPressed: () => Navigator.pop(context, false),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              Text(
+                '¿Seguro que quieres eliminar "${noticia.titular}"? Esta acción no se puede deshacer.',
+                style: const TextStyle(
+                  fontSize: 15,
+                  height: 1.4,
+                  color: AppColors.textSecondary,
+                ),
+              ),
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.destructive,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    elevation: 0,
+                  ),
+                  child: const Text(
+                    'Eliminar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  child: const Text(
+                    'Cancelar',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
 
@@ -219,8 +393,9 @@ class _AdminScreenState extends State<AdminScreen>
         bottom: TabBar(
           controller: _tabController,
           tabs: const [
-            Tab(icon: Icon(Icons.upload_file), text: 'Cargar CSVs'),
+            Tab(icon: Icon(Icons.upload_file), text: 'Cargar Datos'),
             Tab(icon: Icon(Icons.calendar_today), text: 'Días'),
+            Tab(icon: Icon(Icons.newspaper), text: 'Noticias')
           ],
         ),
       ),
@@ -229,6 +404,7 @@ class _AdminScreenState extends State<AdminScreen>
         children: [
           _buildCsvTab(),
           _buildDiasTab(),
+          _buildNoticiasTab(),
         ],
       ),
     );
@@ -496,6 +672,152 @@ class _AdminScreenState extends State<AdminScreen>
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildNoticiasTab() {
+    if (_cargandoNoticias) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return Padding(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Gestión de Noticias',
+            style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const SizedBox(height: 16),
+
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _regenerandoResumen ? null : _regenerarResumen,
+              icon: _regenerandoResumen
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      ),
+                    )
+                  : const Icon(Icons.auto_awesome, color: Colors.white),
+              label: Text(
+                _regenerandoResumen ? 'Regenerando...' : 'Regenerar resumen IA',
+                style: const TextStyle(fontSize: 16, color: Colors.white),
+              ),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+            ),
+          ),
+
+          if (_mensajeNoticias != null) ...[
+            const SizedBox(height: 12),
+            AppMessage(
+              message: _mensajeNoticias!,
+              isError: _mensajeNoticiasError,
+              onDismiss: () => setState(() => _mensajeNoticias = null),
+            ),
+          ],
+
+          const SizedBox(height: 16),
+
+          Expanded(
+            child: _noticias.isEmpty
+                ? const Center(
+                    child: Text(
+                      'No hay noticias publicadas',
+                      style: TextStyle(fontSize: 16, color: AppColors.textSecondary),
+                    ),
+                  )
+                : RefreshIndicator(
+                    color: AppColors.primary,
+                    onRefresh: _cargarNoticias,
+                    child: ListView.separated(
+                      itemCount: _noticias.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 8),
+                      itemBuilder: (context, index) =>
+                          _buildNoticiaCard(_noticias[index]),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNoticiaCard(Noticia noticia) {
+    final fecha = noticia.fecha;
+    final fechaFormateada =
+        '${fecha.day.toString().padLeft(2, '0')}/${fecha.month.toString().padLeft(2, '0')}/${fecha.year}';
+    final subtitulo = noticia.origen.isNotEmpty
+        ? '$fechaFormateada · ${noticia.origen}'
+        : fechaFormateada;
+    final eliminando = _eliminandoNoticiaId == noticia.id;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border, width: 0.5),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 8, 12),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    noticia.titular,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 15,
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitulo,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            eliminando
+                ? const Padding(
+                    padding: EdgeInsets.all(12),
+                    child: SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.delete_outline),
+                    color: AppColors.errorText,
+                    tooltip: 'Eliminar noticia',
+                    onPressed: _eliminandoNoticiaId != null
+                        ? null
+                        : () => _eliminarNoticia(noticia),
+                  ),
+          ],
+        ),
       ),
     );
   }

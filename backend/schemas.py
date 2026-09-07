@@ -189,6 +189,10 @@ class NoticiaResponse(NoticiaBase):
 class ResumenResponse(BaseModel):
     resumen: str
     modelo: str
+    fecha_actualizacion: datetime
+
+    class Config:
+        from_attributes = True
     
 #Emisora
 class EmisoraBase(BaseModel):

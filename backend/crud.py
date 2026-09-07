@@ -5,7 +5,7 @@ import schemas
 import os
 import google.generativeai as genai
 from hashing import get_password_hash, verify_password
-from datetime import time
+from datetime import time, datetime
 
 #Día
 def get_dia(db: Session, dia_id: int) -> Optional[models.Dia]:
@@ -286,6 +286,7 @@ def update_noticia(db: Session, noticia_id: int, noticia: schemas.NoticiaUpdate)
             setattr(db_noticia, key, value)
         db.commit()
         db.refresh(db_noticia)
+
     return db_noticia
 
 def delete_noticia(db: Session, noticia_id: int) -> bool:
@@ -308,12 +309,12 @@ PROMPT_RESUMEN = (
     "relacionadas con la Semana Santa en Sevilla. No inventes datos que no aparezcan en las noticias."
 )
 
-def create_resumen(db: Session) -> dict:
+def _generar_texto_resumen(db: Session) -> dict:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("Falta la clave de la API de Gemini")
 
-    noticias = get_noticias(db, limit=30)
+    noticias = get_noticias(db)
     if not noticias:
         return {"resumen": "No hay noticias disponibles para resumir.", "modelo": GEMINI_MODEL}
 
@@ -330,7 +331,32 @@ def create_resumen(db: Session) -> dict:
         return {"resumen": texto, "modelo": GEMINI_MODEL}
     except Exception as e:
         raise RuntimeError(f"Error llamando a Gemini: {e}")
-    
+
+
+def regenerar_resumen(db: Session) -> models.ResumenNoticias:
+    data = _generar_texto_resumen(db)
+
+    fila = db.query(models.ResumenNoticias).first()
+    if fila is None:
+        fila = models.ResumenNoticias(
+            resumen=data["resumen"],
+            modelo=data["modelo"],
+            fecha_actualizacion=datetime.utcnow(),
+        )
+        db.add(fila)
+    else:
+        fila.resumen = data["resumen"]
+        fila.modelo = data["modelo"]
+        fila.fecha_actualizacion = datetime.utcnow()
+
+    db.commit()
+    db.refresh(fila)
+    return fila
+
+
+def get_resumen(db: Session) -> Optional[models.ResumenNoticias]:
+    return db.query(models.ResumenNoticias).first()
+
 #Emisora
 def get_emisora(db: Session, emisora_id: int) -> Optional[models.Emisora]:
     return db.query(models.Emisora).filter(models.Emisora.id == emisora_id).first()

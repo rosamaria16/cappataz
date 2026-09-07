@@ -72,7 +72,14 @@ class Noticia(Base):
     origen = Column(String(50), nullable=False)
     fecha = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-
+class ResumenNoticias(Base):
+    __tablename__ = "resumenes"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    resumen = Column(Text, nullable=False)
+    modelo = Column(String(50), nullable=False)
+    fecha_actualizacion = Column(DateTime, nullable=False)
+    
 class Emisora(Base):
     __tablename__ = "emisoras"
     
