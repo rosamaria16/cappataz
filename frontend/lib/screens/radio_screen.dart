@@ -75,8 +75,8 @@ class _RadioScreenState extends State<RadioScreen> {
 
         return GridView.builder(
           padding: const EdgeInsets.all(16),
-          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: 2,
+          gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+            maxCrossAxisExtent: 200,
             crossAxisSpacing: 14,
             mainAxisSpacing: 14,
             childAspectRatio: 0.85,
