@@ -140,4 +140,62 @@ class AdminService {
       throw Exception(e.toString().replaceFirst('Exception: ', ''));
     }
   }
+
+  static Future<void> deleteNoticia(int noticiaId) async {
+    try {
+      final response = await http.delete(
+        Uri.parse('$apiBaseUrl/noticias/$noticiaId'),
+        headers: _authHeaders,
+      ).timeout(requestTimeout, onTimeout: () {
+        throw Exception('Tiempo de conexión agotado');
+      });
+
+      if (response.statusCode == 204 || response.statusCode == 200) {
+        return;
+      } else if (response.statusCode == 401) {
+        throw Exception('Debes iniciar sesión como administrador');
+      } else if (response.statusCode == 403) {
+        throw Exception('No tienes permisos de administrador');
+      } else if (response.statusCode == 404) {
+        throw Exception('La noticia ya no existe');
+      } else if (response.statusCode >= 500) {
+        throw Exception('Error en el servidor');
+      } else {
+        throw Exception('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
+
+  static Future<Map<String, dynamic>> regenerarResumen() async {
+    try {
+      final response = await http.post(
+        Uri.parse('$apiBaseUrl/noticias/regenerar-resumen'),
+        headers: _authHeaders,
+      ).timeout(const Duration(seconds: 60), onTimeout: () {
+        throw Exception('Tiempo de conexión agotado');
+      });
+
+      if (response.statusCode == 200) {
+        return json.decode(utf8.decode(response.bodyBytes))
+            as Map<String, dynamic>;
+      } else if (response.statusCode == 401) {
+        throw Exception('Debes iniciar sesión como administrador');
+      } else if (response.statusCode == 403) {
+        throw Exception('No tienes permisos de administrador');
+      } else if (response.statusCode == 502) {
+        throw Exception('Error al generar el resumen con la IA');
+      } else if (response.statusCode == 503) {
+        final data = json.decode(utf8.decode(response.bodyBytes));
+        throw Exception(data['detail'] ?? 'El servicio de IA no está disponible');
+      } else if (response.statusCode >= 500) {
+        throw Exception('Error en el servidor');
+      } else {
+        throw Exception('Error: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception(e.toString().replaceFirst('Exception: ', ''));
+    }
+  }
 }
