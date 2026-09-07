@@ -19,6 +19,7 @@ allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", _default_orig
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"http://(localhost|127\.0\.0\.1):\d+",
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],

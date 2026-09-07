@@ -59,7 +59,7 @@ class Noticia {
     }
   }
 
-  static Future<String> generarResumen() async {
+  static Future<String> getResumen() async {
   final response = await http.get(
     Uri.parse('$apiBaseUrl/noticias/summary'),
   ).timeout(const Duration(seconds: 30), onTimeout: () {
@@ -70,6 +70,6 @@ class Noticia {
     final data = json.decode(utf8.decode(response.bodyBytes)) as Map<String, dynamic>;
     return data['resumen']?.toString() ?? '';
   }
-  throw Exception('No se pudo generar el resumen (${response.statusCode})');
+  throw Exception('No se pudo mostrar el resumen (${response.statusCode})');
 }
 }
