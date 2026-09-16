@@ -4,7 +4,8 @@ from typing import List
 import crud
 import schemas
 from database import get_db
-from auth import crear_token
+from auth import crear_token, obtener_admin_actual
+import models
 
 router = APIRouter()
 
@@ -59,7 +60,12 @@ def change_password(usuario_id: int, data: schemas.ChangePassword, db: Session =
         raise HTTPException(status_code=status, detail=str(e))
 
 @router.put("/admin/{usuario_id}", response_model=schemas.UsuarioResponse)
-def update_admin_usuario(usuario_id: int, usuario: schemas.UsuarioUpdateAdmin, db: Session = Depends(get_db)):
+def update_admin_usuario(
+    usuario_id: int,
+    usuario: schemas.UsuarioUpdateAdmin,
+    db: Session = Depends(get_db),
+    admin: models.Usuario = Depends(obtener_admin_actual),
+):
     db_usuario = crud.update_admin_usuario(db, usuario_id=usuario_id, usuario=usuario)
     if db_usuario is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
