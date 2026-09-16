@@ -329,8 +329,8 @@ def _generar_texto_resumen(db: Session) -> dict:
         response = model.generate_content(f"{PROMPT_RESUMEN}\n\nNoticias:\n{bloque}")
         texto = (response.text or "").strip()
         return {"resumen": texto, "modelo": GEMINI_MODEL}
-    except Exception as e:
-        raise RuntimeError(f"Error llamando a Gemini: {e}")
+    except Exception:
+        raise RuntimeError("Error llamando a Gemini")
 
 
 def regenerar_resumen(db: Session) -> models.ResumenNoticias:

@@ -29,10 +29,10 @@ def leer_resumen(db: Session = Depends(get_db)):
     if resumen is None:
         try:
             resumen = crud.regenerar_resumen(db)
-        except ValueError as e:
-            raise HTTPException(status_code=503, detail=str(e))
-        except RuntimeError as e:
-            raise HTTPException(status_code=502, detail=str(e))
+        except ValueError:
+            raise HTTPException(status_code=503, detail="El servicio de resumen no está disponible")
+        except RuntimeError:
+            raise HTTPException(status_code=502, detail="No se pudo generar el resumen")
     return resumen
     
 @router.post("/regenerar-resumen", response_model=schemas.ResumenResponse)
@@ -42,10 +42,10 @@ def forzar_regenerar_resumen(
 ):
     try:
         return crud.regenerar_resumen(db)
-    except ValueError as e:
-        raise HTTPException(status_code=503, detail=str(e))
-    except RuntimeError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+    except ValueError:
+        raise HTTPException(status_code=503, detail="El servicio de resumen no está disponible")
+    except RuntimeError:
+        raise HTTPException(status_code=502, detail="No se pudo generar el resumen")
 
 
 @router.get("/{noticia_id}", response_model=schemas.NoticiaResponse)
