@@ -10,7 +10,8 @@ class AuthManager {
   Map<String, dynamic>? _currentUser;
   String? _token;
 
-  bool get isLoggedIn => _currentUser != null;
+  bool get isLoggedIn =>
+      _currentUser != null && _token != null && _token!.trim().isNotEmpty;
 
   bool get isAdmin => _currentUser != null && _currentUser!['admin'] == 1;
   

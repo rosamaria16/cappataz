@@ -4,6 +4,7 @@ from typing import List
 import crud
 import schemas
 from database import get_db
+from auth import obtener_admin_actual
 
 router = APIRouter()
 
@@ -26,12 +27,12 @@ def read_infopasos_by_hermandad(hermandad_id: int, db: Session = Depends(get_db)
     return crud.get_infopasos_by_hermandad(db, hermandad_id=hermandad_id)
 
 
-@router.post("/", response_model=schemas.InfoPasoResponse, status_code=201)
+@router.post("/", response_model=schemas.InfoPasoResponse, status_code=201, dependencies=[Depends(obtener_admin_actual)])
 def create_infopaso(infopaso: schemas.InfoPasoCreate, db: Session = Depends(get_db)):
     return crud.create_infopaso(db=db, infopaso=infopaso)
 
 
-@router.put("/{infopaso_id}", response_model=schemas.InfoPasoResponse)
+@router.put("/{infopaso_id}", response_model=schemas.InfoPasoResponse,dependencies=[Depends(obtener_admin_actual)])
 def update_infopaso(infopaso_id: int, infopaso: schemas.InfoPasoUpdate, db: Session = Depends(get_db)):
     db_infopaso = crud.update_infopaso(db, infopaso_id=infopaso_id, infopaso=infopaso)
     if db_infopaso is None:
@@ -39,7 +40,7 @@ def update_infopaso(infopaso_id: int, infopaso: schemas.InfoPasoUpdate, db: Sess
     return db_infopaso
 
 
-@router.delete("/{infopaso_id}", status_code=204)
+@router.delete("/{infopaso_id}", status_code=204,dependencies=[Depends(obtener_admin_actual)])
 def delete_infopaso(infopaso_id: int, db: Session = Depends(get_db)):
     success = crud.delete_infopaso(db, infopaso_id=infopaso_id)
     if not success:

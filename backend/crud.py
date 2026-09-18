@@ -329,8 +329,8 @@ def _generar_texto_resumen(db: Session) -> dict:
         response = model.generate_content(f"{PROMPT_RESUMEN}\n\nNoticias:\n{bloque}")
         texto = (response.text or "").strip()
         return {"resumen": texto, "modelo": GEMINI_MODEL}
-    except Exception as e:
-        raise RuntimeError(f"Error llamando a Gemini: {e}")
+    except Exception:
+        raise RuntimeError("Error llamando a Gemini")
 
 
 def regenerar_resumen(db: Session) -> models.ResumenNoticias:
@@ -398,7 +398,6 @@ def clear_hermandades(db: Session) -> int:
     
     count = db.query(models.Hermandad).count()
     db.query(models.Hermandad).delete()
-    db.commit()
     return count
 
 def load_hermandades_from_csv(db: Session, csv_content: str) -> int:
@@ -456,7 +455,6 @@ def load_hermandades_from_csv(db: Session, csv_content: str) -> int:
         registros.append(hermandad)
     
     db.add_all(registros)
-    db.commit()
     return len(registros)
 
 
@@ -467,7 +465,6 @@ def clear_infopasos(db: Session) -> int:
     
     count = db.query(models.InfoPaso).count()
     db.query(models.InfoPaso).delete()
-    db.commit()
     return count
 
 def load_infopasos_from_csv(db: Session, csv_content: str) -> int:
@@ -555,5 +552,4 @@ def load_infopasos_from_csv(db: Session, csv_content: str) -> int:
         registros.append(infopaso)
     
     db.add_all(registros)
-    db.commit()
     return len(registros)

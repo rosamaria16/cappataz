@@ -21,6 +21,9 @@ class UsuarioService {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         final token = data['access_token'] as String?;
+        if (token == null || token.trim().isEmpty) {
+          throw Exception('No se recibió un token de sesión válido');
+        }
         AuthManager().setUser(data['usuario'] ?? data, token: token);
         return data;
       } else if (response.statusCode == 401) {
@@ -56,7 +59,6 @@ class UsuarioService {
 
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
-        AuthManager().setUser(data['usuario'] ?? data);
         return data;
       } else if (response.statusCode == 400) {
         throw Exception('Email ya registrado');
@@ -83,7 +85,7 @@ class UsuarioService {
 
       final response = await http.put(
         Uri.parse('$apiBaseUrl/usuarios/$userId'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', ...AuthManager().authHeaders},
         body: json.encode(body),
       ).timeout(requestTimeout, onTimeout: () {
         throw Exception('Tiempo de conexión agotado');
@@ -114,7 +116,7 @@ class UsuarioService {
     try {
       final response = await http.put(
         Uri.parse('$apiBaseUrl/usuarios/$userId/change-password'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', ...AuthManager().authHeaders},
         body: json.encode({
           'contrasena_actual': currentPassword,
           'contrasena_nueva': newPassword,

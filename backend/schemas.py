@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from datetime import datetime, time
 from typing import Optional, List
 from enum import Enum
@@ -82,19 +82,19 @@ class UsuarioBase(BaseModel):
     email: EmailStr
 
 class UsuarioCreate(UsuarioBase):
-    contrasena: str
+    contrasena: str = Field(min_length=6, max_length=128)
 
 class UsuarioUpdate(BaseModel):
     nombre: Optional[str] = None
     email: Optional[EmailStr] = None
-    contrasena: Optional[str] = None
+    contrasena: Optional[str] = Field(default=None, min_length=6, max_length=128)
     
 class UsuarioUpdateAdmin(BaseModel):
     admin: Optional[bool] = None
 
 class ChangePassword(BaseModel):
-    contrasena_actual: str
-    contrasena_nueva: str
+    contrasena_actual: str = Field(min_length=1, max_length=128)
+    contrasena_nueva: str = Field(min_length=6, max_length=128)
 
 class UsuarioResponse(UsuarioBase):
     id: int
@@ -105,7 +105,7 @@ class UsuarioResponse(UsuarioBase):
 
 class LoginRequest(BaseModel):
     email: EmailStr
-    contrasena: str
+    contrasena: str = Field(max_length=128)
 
 class LoginResponse(BaseModel):
     access_token: str

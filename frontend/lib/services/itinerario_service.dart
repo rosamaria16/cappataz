@@ -5,12 +5,14 @@ import 'dia_service.dart';
 import 'hermandad_service.dart';
 import 'info_paso_service.dart';
 import '../utils/hora_utils.dart';
+import 'auth_manager.dart';
 
 class ItinerarioApi {
   static Future<Map<String, dynamic>> getOrCreateByUsuario(int userId) async {
     try {
       final response = await http.get(
         Uri.parse('$apiBaseUrl/itinerarios/usuario/$userId'),
+        headers: AuthManager().authHeaders,
       ).timeout(requestTimeout, onTimeout: () {
         throw Exception('Tiempo de conexión agotado');
       });
@@ -20,7 +22,7 @@ class ItinerarioApi {
       } else if (response.statusCode == 404) {
         final createResponse = await http.post(
           Uri.parse('$apiBaseUrl/itinerarios/'),
-          headers: {'Content-Type': 'application/json'},
+          headers: {'Content-Type': 'application/json', ...AuthManager().authHeaders},
           body: json.encode({'idUsuario': userId}),
         ).timeout(requestTimeout, onTimeout: () {
           throw Exception('Tiempo de conexión agotado');
@@ -46,7 +48,7 @@ class ItinerarioApi {
     try {
       final response = await http.post(
         Uri.parse('$apiBaseUrl/itinerarios/$itinerarioId/items'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', ...AuthManager().authHeaders},
         body: json.encode({'idInfoPaso': idInfoPaso}),
       ).timeout(requestTimeout, onTimeout: () {
         throw Exception('Tiempo de conexión agotado');
@@ -68,6 +70,7 @@ class ItinerarioApi {
     try {
       final response = await http.delete(
         Uri.parse('$apiBaseUrl/itinerarios/$itinerarioId/items/$itemId'),
+        headers: AuthManager().authHeaders,
       ).timeout(requestTimeout, onTimeout: () {
         throw Exception('Tiempo de conexión agotado');
       });
@@ -84,6 +87,7 @@ class ItinerarioApi {
     try {
       final response = await http.get(
         Uri.parse('$apiBaseUrl/itinerarios/$itinerarioId/dias'),
+        headers: AuthManager().authHeaders,
       ).timeout(requestTimeout, onTimeout: () {
         throw Exception('Tiempo de conexión agotado');
       });
@@ -105,7 +109,7 @@ class ItinerarioApi {
     try {
       final response = await http.post(
         Uri.parse('$apiBaseUrl/itinerarios/$itinerarioId/dias'),
-        headers: {'Content-Type': 'application/json'},
+        headers: {'Content-Type': 'application/json', ...AuthManager().authHeaders},
         body: json.encode({'idDia': idDia}),
       ).timeout(requestTimeout, onTimeout: () {
         throw Exception('Tiempo de conexión agotado');
@@ -127,6 +131,7 @@ class ItinerarioApi {
     try {
       final response = await http.delete(
         Uri.parse('$apiBaseUrl/itinerarios/$itinerarioId/dias/$diaItinerarioId'),
+        headers: AuthManager().authHeaders,
       ).timeout(requestTimeout, onTimeout: () {
         throw Exception('Tiempo de conexión agotado');
       });

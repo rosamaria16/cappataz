@@ -10,6 +10,23 @@ from auth import obtener_admin_actual
 
 router = APIRouter()
 
+MAX_CSV_SIZE_BYTES = 5 * 1024 * 1024
+
+
+async def _read_csv_upload(file: UploadFile) -> str:
+    filename = file.filename or ""
+    if not filename.lower().endswith(".csv"):
+        raise HTTPException(status_code=400, detail="El archivo debe ser un CSV")
+
+    contenido = await file.read(MAX_CSV_SIZE_BYTES + 1)
+    if len(contenido) > MAX_CSV_SIZE_BYTES:
+        raise HTTPException(status_code=413, detail="El archivo CSV es demasiado grande")
+
+    try:
+        return contenido.decode("utf-8")
+    except UnicodeDecodeError:
+        raise HTTPException(status_code=400, detail="El archivo no tiene codificación UTF-8 válida")
+
 
 @router.get("/dias", response_model=List[schemas.DiaResponse])
 def listar_dias(
@@ -55,21 +72,18 @@ async def upload_infopasos(
     admin: models.Usuario = Depends(obtener_admin_actual),
     db: Session = Depends(get_db),
 ):
-
-    if not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser un CSV")
-
-    try:
-        contenido = await file.read()
-        csv_text = contenido.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="El archivo no tiene codificación UTF-8 válida")
+    csv_text = await _read_csv_upload(file)
 
     try:
         crud.clear_infopasos(db)
         total = crud.load_infopasos_from_csv(db, csv_text)
+        db.commit()
     except ValueError as e:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="No se pudo cargar el archivo CSV")
 
     return schemas.CargarInfoPasosResponse(
         mensaje=f"Se cargaron {total} registros correctamente",
@@ -83,21 +97,18 @@ async def upload_hermandades(
     admin: models.Usuario = Depends(obtener_admin_actual),
     db: Session = Depends(get_db),
 ):
-
-    if not file.filename.endswith(".csv"):
-        raise HTTPException(status_code=400, detail="El archivo debe ser un CSV")
-
-    try:
-        contenido = await file.read()
-        csv_text = contenido.decode("utf-8")
-    except UnicodeDecodeError:
-        raise HTTPException(status_code=400, detail="El archivo no tiene codificación UTF-8 válida")
+    csv_text = await _read_csv_upload(file)
 
     try:
         crud.clear_hermandades(db)
         total = crud.load_hermandades_from_csv(db, csv_text)
+        db.commit()
     except ValueError as e:
+        db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
+    except Exception:
+        db.rollback()
+        raise HTTPException(status_code=500, detail="No se pudo cargar el archivo CSV")
 
     return schemas.CargarHermandadesResponse(
         mensaje=f"Se cargaron {total} hermandades correctamente",

@@ -151,12 +151,16 @@ class _LoginModalState extends State<LoginModal> {
     }
   }
 
-  void _goToRegister() {
-    Navigator.pop(context);
-    Navigator.push(
+  Future<void> _goToRegister() async {
+    final registered = await Navigator.push<bool>(
       context,
       MaterialPageRoute(builder: (context) => const RegisterScreen()),
     );
+    if (!mounted) return;
+    if (registered == true && AuthManager().isLoggedIn) {
+      Navigator.pop(context);
+      widget.onLoginSuccess?.call();
+    }
   }
 
   @override
