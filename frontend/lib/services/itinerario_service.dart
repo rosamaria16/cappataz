@@ -5,6 +5,7 @@ import 'dia_service.dart';
 import 'hermandad_service.dart';
 import 'info_paso_service.dart';
 import '../utils/hora_utils.dart';
+import '../utils/franja_horaria_utils.dart';
 import 'auth_manager.dart';
 
 class ItinerarioApi {
@@ -195,17 +196,16 @@ class EntradaItinerarioExport {
       final diasItinerario = await ItinerarioApi.getDias(itinerarioId);
       final todosLosDias = await Dia.getDiasSemanaSanta();
 
-      final diasAExportar = idDia != null
-        ? diasItinerario.where((d) => d['idDia'] == idDia).toList()
-        : diasItinerario;
+      final diasAExportar = diasItinerario
+          .where((d) => idDia == null || d['idDia'] == idDia)
+          .map((d) => todosLosDias.firstWhere((dia) => dia.id == d['idDia']))
+          .toList()
+        ..sort((a, b) => a.fecha.compareTo(b.fecha));
 
 
       final List<EntradaItinerarioExport> entradas = [];
 
-      for (final diaItinerario in diasAExportar) {
-
-        final dia = todosLosDias.firstWhere((d) => d.id == diaItinerario['idDia'],);
-
+      for (final dia in diasAExportar) {
         final infoPasosDelDia = await InfoPaso.getByDia(dia.id);
         final hermandadesDelDia = await Hermandad.getHermandadesDia(dia.id);
 
@@ -214,7 +214,15 @@ class EntradaItinerarioExport {
             h.id: h.nombre
         };
 
-        final seleccionadosDelDia = infoPasosDelDia.where((i) => idsInfoPasoElegidos.contains(i.id));
+        final franjaHoraria = FranjaHoraria.calcularFranjas(
+          infoPasosDelDia.map((i) => horaAMinutos(i.hora)).toList(),
+        );
+        final seleccionadosDelDia = infoPasosDelDia
+            .where((i) => idsInfoPasoElegidos.contains(i.id))
+            .toList()
+          ..sort((a, b) => franjaHoraria
+              .ajustarHora(horaAMinutos(a.hora))
+              .compareTo(franjaHoraria.ajustarHora(horaAMinutos(b.hora))));
 
         for (final info in seleccionadosDelDia) {
           entradas.add(EntradaItinerarioExport(
@@ -228,12 +236,6 @@ class EntradaItinerarioExport {
           ));
         }
       }
-
-      entradas.sort((a, b) {
-        final comparacionFecha = a.fecha.compareTo(b.fecha);
-        if (comparacionFecha != 0) return comparacionFecha;
-        return horaAMinutos(a.hora).compareTo(horaAMinutos(b.hora));
-      });
 
       return entradas;
     } catch (e) {
