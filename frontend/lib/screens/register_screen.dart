@@ -84,12 +84,32 @@ class _RegisterScreenState extends State<RegisterScreen>{
       _errorMessage = null;
     });
 
+    final email = _emailController.text;
+    final password = _passwordController.text;
     try {
       await UsuarioService.register(
-        _emailController.text,
-        _passwordController.text,
+        email,
+        password,
         _nombreController.text,
       );
+
+      try {
+        await UsuarioService.login(email, password);
+      } catch (_) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Cuenta creada, pero no se pudo iniciar sesión automáticamente. '
+                'Inicia sesión con tus credenciales.',
+              ),
+              duration: Duration(seconds: 10),
+            ),
+          );
+          Navigator.pop(context, false);
+        }
+        return;
+      }
 
       if (mounted) {
         Navigator.pop(context, true);
