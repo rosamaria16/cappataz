@@ -60,7 +60,7 @@ class UsuarioService {
       if (response.statusCode == 201) {
         final data = json.decode(response.body);
         return data;
-      } else if (response.statusCode == 400) {
+      } else if (response.statusCode == 400 || response.statusCode == 409) {
         throw Exception('Email ya registrado');
       } else if (response.statusCode >= 500) {
         throw Exception('Error en el servidor');
@@ -97,6 +97,8 @@ class UsuarioService {
         return data;
       } else if (response.statusCode == 404) {
         throw Exception('Usuario no encontrado');
+      } else if (response.statusCode == 409) {
+        throw Exception('Email ya registrado');
       } else if (response.statusCode >= 500) {
         throw Exception('Error en el servidor');
       } else {

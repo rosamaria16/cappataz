@@ -33,6 +33,15 @@ class ItinerarioApi {
           data['items'] = [];
           return data;
         }
+        if (createResponse.statusCode == 409) {
+          final existingResponse = await http.get(
+            Uri.parse('$apiBaseUrl/itinerarios/usuario/$userId'),
+            headers: AuthManager().authHeaders,
+          ).timeout(requestTimeout);
+          if (existingResponse.statusCode == 200) {
+            return json.decode(existingResponse.body);
+          }
+        }
         throw Exception('Error al crear itinerario');
       } else if (response.statusCode >= 500) {
         throw Exception('Error en el servidor');
@@ -56,6 +65,10 @@ class ItinerarioApi {
 
       if (response.statusCode == 201) {
         return json.decode(response.body);
+      } else if (response.statusCode == 409) {
+        throw Exception('El elemento ya está en el itinerario');
+      } else if (response.statusCode == 404) {
+        throw Exception('El itinerario o el dato seleccionado ya no existe');
       } else if (response.statusCode >= 500) {
         throw Exception('Error en el servidor');
       } else {
@@ -117,6 +130,10 @@ class ItinerarioApi {
 
       if (response.statusCode == 201) {
         return json.decode(response.body);
+      } else if (response.statusCode == 409) {
+        throw Exception('El día ya está en el itinerario');
+      } else if (response.statusCode == 404) {
+        throw Exception('El itinerario o el dato seleccionado ya no existe');
       } else if (response.statusCode >= 500) {
         throw Exception('Error en el servidor');
       } else {
