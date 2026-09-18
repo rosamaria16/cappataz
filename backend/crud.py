@@ -5,7 +5,8 @@ import schemas
 import os
 import google.generativeai as genai
 from hashing import get_password_hash, verify_password
-from datetime import time, datetime
+from datetime import datetime
+from backend.infopasos_util import leer_infopasos_csv
 
 #Día
 def get_dia(db: Session, dia_id: int) -> Optional[models.Dia]:
@@ -466,88 +467,6 @@ def clear_infopasos(db: Session) -> int:
     return count
 
 def load_infopasos_from_csv(db: Session, csv_content: str) -> int:
-    
-    lines = csv_content.strip().split("\n")
-    if len(lines) < 2:
-        raise ValueError("El CSV debe tener al menos una cabecera y una fila de datos")
-    
-    header = lines[0].strip().split(";")
-    expected = ["idHermandad", "tipoPaso", "hora", "localizacion", "difHora", "esCarreraOficial"]
-    if header != expected:
-        raise ValueError(f"Cabecera incorrecta. Se esperaba: {';'.join(expected)}")
-    
-    tipos_paso_validos = ["CRUZGUIA", "PALIO", "DUELO", "PASO"]
-    registros = []
-    
-    for i, line in enumerate(lines[1:], start=2):
-        line = line.strip()
-        if not line:
-            continue
-        
-        campos = line.split(";")
-        if len(campos) != 6:
-            raise ValueError(f"Línea {i}: se esperaban 6 campos, se encontraron {len(campos)}")
-        
-        id_hermandad_str = campos[0].strip()
-        tipo_paso = campos[1].strip()
-        hora_str = campos[2].strip()
-        localizacion = campos[3].strip()
-        dif_hora_str = campos[4].strip()
-        es_carrera_oficial = campos[5].strip()
-        
-        if not id_hermandad_str:
-            raise ValueError(f"Línea {i}: idHermandad no puede estar vacío")
-        try:
-            id_hermandad = int(id_hermandad_str)
-            if id_hermandad <= 0:
-                raise ValueError(f"Línea {i}: idHermandad debe ser un número positivo")
-        except ValueError:
-            raise ValueError(f"Línea {i}: idHermandad debe ser un número entero válido")
-        
-        if not tipo_paso:
-            raise ValueError(f"Línea {i}: tipoPaso no puede estar vacío")
-        if tipo_paso not in tipos_paso_validos:
-            raise ValueError(f"Línea {i}: tipoPaso '{tipo_paso}' no es válido. Debe ser: {', '.join(tipos_paso_validos)}")
-        
-        if not hora_str:
-            raise ValueError(f"Línea {i}: hora no puede estar vacía")
-        try:
-            partes_hora = hora_str.split(":")
-            if len(partes_hora) != 2:
-                raise ValueError("Formato incorrecto")
-            hora = time(int(partes_hora[0]), int(partes_hora[1]))
-        except (ValueError, IndexError):
-            raise ValueError(f"Línea {i}: hora debe tener formato HH:MM (ej: 17:30)")
-        
-        if not localizacion:
-            raise ValueError(f"Línea {i}: localizacion no puede estar vacía")
-        
-        dif_hora = None
-        if dif_hora_str:
-            try:
-                partes_dif = dif_hora_str.split(":")
-                if len(partes_dif) != 2:
-                    raise ValueError("Formato incorrecto")
-                dif_hora = time(int(partes_dif[0]), int(partes_dif[1]))
-            except (ValueError, IndexError):
-                raise ValueError(f"Línea {i}: difHora debe tener formato HH:MM (ej: 17:00) o estar vacío")
-        
-        if es_carrera_oficial:
-            if es_carrera_oficial not in ("0", "1"):
-                raise ValueError(f"Línea {i}: esCarreraOficial debe ser 0, 1 o estar vacío")
-            es_carrera_oficial = int(es_carrera_oficial)
-        else:
-            es_carrera_oficial = 0
-        
-        infopaso = models.InfoPaso(
-            idHermandad=id_hermandad,
-            tipoPaso=tipo_paso,
-            hora=hora,
-            localizacion=localizacion,
-            difHora=dif_hora,
-            esCarreraOficial=es_carrera_oficial,
-        )
-        registros.append(infopaso)
-    
+    registros = [models.InfoPaso(**entrada) for entrada in leer_infopasos_csv(csv_content)]
     db.add_all(registros)
     return len(registros)
