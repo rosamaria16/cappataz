@@ -140,8 +140,6 @@ def update_usuario(db: Session, usuario_id: int, usuario: schemas.UsuarioUpdate)
     db_usuario = get_usuario(db, usuario_id)
     if db_usuario:
         update_data = usuario.model_dump(exclude_unset=True)
-        if "contrasena" in update_data and update_data["contrasena"]:
-            update_data["contrasena"] = get_password_hash(update_data["contrasena"])
         for key, value in update_data.items():
             setattr(db_usuario, key, value)
         db.commit()
