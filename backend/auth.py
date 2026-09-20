@@ -5,7 +5,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import get_db
 import models
-from backend.db_config import required_env
+from db_config import required_env
 
 SECRET_KEY = required_env("JWT_SECRET_KEY")
 ALGORITHM = "HS256"

@@ -6,7 +6,7 @@ import os
 import google.generativeai as genai
 from hashing import get_password_hash, verify_password
 from datetime import datetime
-from backend.infopasos_util import leer_infopasos_csv
+from infopasos_util import leer_infopasos_csv
 
 #Día
 def get_dia(db: Session, dia_id: int) -> Optional[models.Dia]:

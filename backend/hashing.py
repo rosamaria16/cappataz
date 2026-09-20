@@ -1,5 +1,5 @@
 from pwdlib import PasswordHash
-from backend.db_config import required_env
+from db_config import required_env
 
 PASSWORD_PEPPER = required_env("PASSWORD_PEPPER")
 PASSWORD_HASH = PasswordHash.recommended()

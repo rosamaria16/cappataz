@@ -4,7 +4,7 @@ from database import SessionLocal, engine, Base
 from models import Dia, Hermandad, InfoPaso, Usuario, Emisora, Noticia, Itinerario, ItemItinerario, DiaItinerario
 from hashing import get_password_hash
 from datetime import datetime
-from backend.infopasos_util import leer_infopasos_csv
+from infopasos_util import leer_infopasos_csv
 import os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

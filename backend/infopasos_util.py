@@ -6,7 +6,6 @@ from io import StringIO
 def hora_a_minutos(hora: time) -> int:
     return hora.hour * 60 + hora.minute
 
-
 def rellenar_franjas(registros: list[dict]) -> list[dict]:
     grupos = {}
     for entrada in registros:
@@ -30,7 +29,6 @@ def rellenar_franjas(registros: list[dict]) -> list[dict]:
                 })
         resultado.extend(sorted(entradas + relleno, key=lambda e: hora_a_minutos(e['hora'])))
     return resultado
-
 
 def leer_infopasos_csv(csv_content: str) -> list[dict]:
     
