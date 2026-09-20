@@ -8,10 +8,11 @@ from sqlalchemy import pool
 from alembic import context
 
 sys.path.insert(0, str(Path(__file__).parent.parent / 'backend'))
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from app_config import get_database_url
-from database import Base
-from models import *
+from backend.db_config import get_database_url
+from backend.database import Base
+from backend.models import *
 
 
 # this is the Alembic Config object, which provides
