@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 import crud
 import schemas
@@ -29,8 +30,14 @@ def login(login_data: schemas.LoginRequest, db: Session = Depends(get_db)):
 @router.post("/", response_model=schemas.UsuarioResponse, status_code=201)
 def create_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
     if crud.usuario_exists_by_email(db, email=usuario.email):
-        raise HTTPException(status_code=400, detail="Email ya registrado")
-    return crud.create_usuario(db=db, usuario=usuario)
+        raise HTTPException(status_code=409, detail="Email ya registrado")
+    try:
+        return crud.create_usuario(db=db, usuario=usuario)
+    except IntegrityError:
+        db.rollback()
+        if crud.usuario_exists_by_email(db, email=usuario.email):
+            raise HTTPException(status_code=409, detail="Email ya registrado") from None
+        raise
 
 @router.get("/", response_model=List[schemas.UsuarioResponse])
 def read_usuarios(
@@ -62,7 +69,14 @@ def update_usuario(
     usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
 ):
     _verificar_acceso_usuario(usuario_id, usuario_actual)
-    db_usuario = crud.update_usuario(db, usuario_id=usuario_id, usuario=usuario)
+    try:
+        db_usuario = crud.update_usuario(db, usuario_id=usuario_id, usuario=usuario)
+    except IntegrityError:
+        db.rollback()
+        existente = crud.get_usuario_by_email(db, email=usuario.email) if usuario.email else None
+        if existente is not None and existente.id != usuario_id:
+            raise HTTPException(status_code=409, detail="Email ya registrado") from None
+        raise
     if db_usuario is None:
         raise HTTPException(status_code=404, detail="Usuario no encontrado")
     return db_usuario

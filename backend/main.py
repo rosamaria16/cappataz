@@ -13,8 +13,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-_default_origins = "http://localhost:3000,http://127.0.0.1:3000"
-allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", _default_origins).split(",") if o.strip()]
+allowed_origins = [o.strip() for o in os.getenv("ALLOWED_ORIGINS").split(",") if o.strip()]
 
 app.add_middleware(
     CORSMiddleware,
@@ -26,7 +25,7 @@ app.add_middleware(
 
 @app.get("/")
 async def root():
-    return {"message": "Semana Santa Sevilla"}
+    return {"message": "CAPPATAZ - Semana Santa Sevilla"}
 
 app.include_router(dias.router, prefix="/api/v1/dias", tags=["Días"])
 app.include_router(hermandades.router, prefix="/api/v1/hermandades", tags=["Hermandades"])

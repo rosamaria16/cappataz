@@ -1,4 +1,3 @@
-import os
 import jwt
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException
@@ -6,8 +5,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from database import get_db
 import models
+from db_config import required_env
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+SECRET_KEY = required_env("JWT_SECRET_KEY")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 336
 

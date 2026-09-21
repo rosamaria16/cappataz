@@ -27,7 +27,7 @@ class Itinerario(Base):
     __tablename__ = "itinerarios"
     
     id = Column(Integer, primary_key=True, index=True)
-    idUsuario = Column(Integer, ForeignKey("usuarios.id"), unique=True, nullable=False)
+    idUsuario = Column(Integer, ForeignKey("usuarios.id", ondelete="CASCADE"), unique=True, nullable=False)
     
     usuario = relationship("Usuario", back_populates="itinerario")
     items = relationship("ItemItinerario", back_populates="itinerario", cascade="all, delete-orphan")
@@ -38,7 +38,7 @@ class DiaItinerario(Base):
     __tablename__ = "dias_itinerario"
     
     id = Column(Integer, primary_key=True, index=True)
-    idItinerario = Column(Integer, ForeignKey("itinerarios.id"), nullable=False)
+    idItinerario = Column(Integer, ForeignKey("itinerarios.id", ondelete="CASCADE"), nullable=False)
     idDia = Column(Integer, ForeignKey("dias.id"), nullable=False)
     
     __table_args__ = (
@@ -52,7 +52,7 @@ class ItemItinerario(Base):
     __tablename__ = "items_itinerario"
     
     id = Column(Integer, primary_key=True, index=True)
-    idItinerario = Column(Integer, ForeignKey("itinerarios.id"), nullable=False)
+    idItinerario = Column(Integer, ForeignKey("itinerarios.id", ondelete="CASCADE"), nullable=False)
     idInfoPaso = Column(Integer, ForeignKey("infopaso.id"), nullable=False)
     
     __table_args__ = (

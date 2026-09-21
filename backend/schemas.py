@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 from datetime import datetime, time
 from typing import Optional, List
 from enum import Enum
@@ -85,9 +85,10 @@ class UsuarioCreate(UsuarioBase):
     contrasena: str = Field(min_length=6, max_length=128)
 
 class UsuarioUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
     nombre: Optional[str] = None
     email: Optional[EmailStr] = None
-    contrasena: Optional[str] = Field(default=None, min_length=6, max_length=128)
     
 class UsuarioUpdateAdmin(BaseModel):
     admin: Optional[bool] = None

@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 import crud
 import schemas
@@ -67,9 +68,17 @@ def create_itinerario(
     
     existente = crud.get_itinerario_by_usuario(db, usuario_id=usuario_id)
     if existente:
-        raise HTTPException(status_code=400, detail="El usuario ya tiene un itinerario")
+        raise HTTPException(status_code=409, detail="El usuario ya tiene un itinerario")
     itinerario_propio = schemas.ItinerarioCreate(idUsuario=usuario_id)
-    return crud.create_itinerario(db=db, itinerario=itinerario_propio)
+    try:
+        return crud.create_itinerario(db=db, itinerario=itinerario_propio)
+    except IntegrityError:
+        db.rollback()
+        if crud.get_usuario(db, usuario_id=usuario_id) is None:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado") from None
+        if crud.get_itinerario_by_usuario(db, usuario_id=usuario_id) is not None:
+            raise HTTPException(status_code=409, detail="El usuario ya tiene un itinerario") from None
+        raise
 
 
 @router.delete("/{itinerario_id}", status_code=204)
@@ -101,7 +110,21 @@ def create_item(
     usuario_actual: models.Usuario = Depends(obtener_usuario_actual),
 ):
     _obtener_itinerario_propietario(itinerario_id, db, usuario_actual)
-    return crud.create_item_itinerario(db=db, itinerario_id=itinerario_id, item=item)
+    if crud.get_infopaso(db, infopaso_id=item.idInfoPaso) is None:
+        raise HTTPException(status_code=404, detail="InfoPaso no encontrado")
+    try:
+        return crud.create_item_itinerario(db=db, itinerario_id=itinerario_id, item=item)
+    except IntegrityError:
+        db.rollback()
+        _obtener_itinerario_propietario(itinerario_id, db, usuario_actual)
+        if crud.get_infopaso(db, infopaso_id=item.idInfoPaso) is None:
+            raise HTTPException(status_code=404, detail="InfoPaso no encontrado") from None
+        existente = db.query(models.ItemItinerario).filter_by(
+            idItinerario=itinerario_id, idInfoPaso=item.idInfoPaso,
+        ).first()
+        if existente is not None:
+            raise HTTPException(status_code=409, detail="El elemento ya está en el itinerario") from None
+        raise
 
 
 @router.delete("/{itinerario_id}/items/{item_id}", status_code=204)
@@ -140,7 +163,19 @@ def create_dia_itinerario(
     db_dia = crud.get_dia(db, dia_id=dia.idDia)
     if db_dia is None:
         raise HTTPException(status_code=404, detail="Día no encontrado")
-    return crud.create_dia_itinerario(db=db, itinerario_id=itinerario_id, dia=dia)
+    try:
+        return crud.create_dia_itinerario(db=db, itinerario_id=itinerario_id, dia=dia)
+    except IntegrityError:
+        db.rollback()
+        _obtener_itinerario_propietario(itinerario_id, db, usuario_actual)
+        if crud.get_dia(db, dia_id=dia.idDia) is None:
+            raise HTTPException(status_code=404, detail="Día no encontrado") from None
+        existente = db.query(models.DiaItinerario).filter_by(
+            idItinerario=itinerario_id, idDia=dia.idDia,
+        ).first()
+        if existente is not None:
+            raise HTTPException(status_code=409, detail="El día ya está en el itinerario") from None
+        raise
 
 
 @router.delete("/{itinerario_id}/dias/{dia_itinerario_id}", status_code=204)

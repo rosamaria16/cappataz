@@ -1,12 +1,8 @@
-import os
-from pathlib import Path
-from dotenv import load_dotenv
 from pwdlib import PasswordHash
+from db_config import required_env
 
-load_dotenv(Path(__file__).resolve().parent.parent / ".env")
-
+PASSWORD_PEPPER = required_env("PASSWORD_PEPPER")
 PASSWORD_HASH = PasswordHash.recommended()
-PASSWORD_PEPPER = os.getenv("PASSWORD_PEPPER")
 dummy_hash = PASSWORD_HASH.hash(f"dummypassword{PASSWORD_PEPPER}") #dummy hash to prevent timing attacks
 
 #hashing
