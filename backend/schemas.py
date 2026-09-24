@@ -227,10 +227,7 @@ class DiasActualizarFechaInicioResponse(BaseModel):
     mensaje: str
     dias_actualizados: int
 
-class CargarInfoPasosResponse(BaseModel):
+class CargarCatalogoResponse(BaseModel):
     mensaje: str
-    registros_cargados: int
-
-class CargarHermandadesResponse(BaseModel):
-    mensaje: str
-    registros_cargados: int
+    hermandades_cargadas: int
+    infopasos_cargados: int
