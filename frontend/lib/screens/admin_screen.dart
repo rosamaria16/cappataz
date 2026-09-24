@@ -19,12 +19,13 @@ class _AdminScreenState extends State<AdminScreen>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
-  String? _nombreArchivo;
-  List<int>? _bytesArchivo;
+  String? _nombreHermandades;
+  List<int>? _bytesHermandades;
+  String? _nombreInfopasos;
+  List<int>? _bytesInfopasos;
   bool _subiendo = false;
   String? _mensajeCsv;
   bool _mensajeCsvError = false;
-  String _tipoCsv = 'infopasos';
   Timer? _timerCsv;
 
   List<Map<String, dynamic>> _dias = [];
@@ -244,24 +245,33 @@ class _AdminScreenState extends State<AdminScreen>
   }
 
 
-  Future<void> _seleccionarArchivo() async {
+  Future<void> _seleccionarArchivo({required bool hermandades}) async {
     final resultado = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['csv'],
       withData: true,
     );
 
-    if (resultado != null && resultado.files.single.bytes != null) {
-      setState(() {
-        _nombreArchivo = resultado.files.single.name;
-        _bytesArchivo = resultado.files.single.bytes!.toList();
-        _mensajeCsv = null;
-      });
+    if (!mounted || resultado == null || resultado.files.single.bytes == null) {
+      return;
     }
+    setState(() {
+      if (hermandades) {
+        _nombreHermandades = resultado.files.single.name;
+        _bytesHermandades = resultado.files.single.bytes!.toList();
+      } else {
+        _nombreInfopasos = resultado.files.single.name;
+        _bytesInfopasos = resultado.files.single.bytes!.toList();
+      }
+      _mensajeCsv = null;
+    });
   }
 
   Future<void> _subirCsv() async {
-    if (_bytesArchivo == null || _nombreArchivo == null) return;
+    if (_subiendo || _bytesHermandades == null || _nombreHermandades == null ||
+        _bytesInfopasos == null || _nombreInfopasos == null) {
+      return;
+    }
 
     setState(() {
       _subiendo = true;
@@ -269,24 +279,17 @@ class _AdminScreenState extends State<AdminScreen>
     });
 
     try {
-      final Map<String, dynamic> respuesta;
-      if (_tipoCsv == 'hermandades') {
-        respuesta = await AdminService.uploadHermandadesCsv(
-          _bytesArchivo!,
-          _nombreArchivo!,
-        );
-      } else {
-        respuesta = await AdminService.uploadInfopasosCsv(
-          _bytesArchivo!,
-          _nombreArchivo!,
-        );
-      }
-
+      final respuesta = await AdminService.uploadCatalogoCsv(
+        _bytesHermandades!, _nombreHermandades!,
+        _bytesInfopasos!, _nombreInfopasos!,
+      );
       if (mounted) {
         setState(() {
           _subiendo = false;
-          _nombreArchivo = null;
-          _bytesArchivo = null;
+          _nombreHermandades = null;
+          _bytesHermandades = null;
+          _nombreInfopasos = null;
+          _bytesInfopasos = null;
         });
         _showCsvMessage(respuesta['mensaje'] ?? 'Carga completada');
       }
@@ -297,7 +300,6 @@ class _AdminScreenState extends State<AdminScreen>
       }
     }
   }
-
 
   Future<void> _cargarDias() async {
     setState(() {
@@ -412,80 +414,50 @@ class _AdminScreenState extends State<AdminScreen>
 
 
   Widget _buildCsvTab() {
-    final opciones = {
-      'infopasos': 'InfoPasos',
-      'hermandades': 'Hermandades',
-    };
-    final descripciones = {
-      'infopasos': 'Formato: idHermandad;tipoPaso;hora;localizacion;difHora;esCarreraOficial',
-      'hermandades': 'Formato: id;nombre;idDia',
-    };
-
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Cargar CSV',
+            'Cargar CSVs',
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 16),
-
-          DropdownButtonFormField<String>(
-            initialValue: _tipoCsv,
-            decoration: InputDecoration(
-              labelText: 'Tipo de datos',
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            ),
-            items: opciones.entries
-                .map((e) => DropdownMenuItem(value: e.key, child: Text(e.value)))
-                .toList(),
-            onChanged: _subiendo
-                ? null
-                : (value) {
-                    setState(() {
-                      _tipoCsv = value!;
-                      _nombreArchivo = null;
-                      _bytesArchivo = null;
-                      _mensajeCsv = null;
-                    });
-                  },
-          ),
+          const Text('Selecciona ambos archivos. Se cargarán juntos.'),
           const SizedBox(height: 8),
-          Text(
-            descripciones[_tipoCsv] ?? '',
-            style: const TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          const Text(
+            'Esta carga reemplaza todas las hermandades e infopasos y vacía '
+            'los días y pasos guardados en los itinerarios de todos los usuarios.',
+          ),
+          const SizedBox(height: 24),
+          const Text('Hermandades: id;nombre;idDia'),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _subiendo ? null : () => _seleccionarArchivo(hermandades: true),
+              icon: const Icon(Icons.folder_open),
+              label: Text(_nombreHermandades ?? 'Seleccionar CSV de hermandades'),
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text('Infopasos: idHermandad;tipoPaso;hora;localizacion;difHora;esCarreraOficial'),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: _subiendo ? null : () => _seleccionarArchivo(hermandades: false),
+              icon: const Icon(Icons.folder_open),
+              label: Text(_nombreInfopasos ?? 'Seleccionar CSV de infopasos'),
+            ),
           ),
           const SizedBox(height: 24),
 
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton.icon(
-              onPressed: _subiendo ? null : _seleccionarArchivo,
-              icon: const Icon(Icons.folder_open),
-              label: Text(
-                _nombreArchivo ?? 'Seleccionar archivo CSV',
-                style: const TextStyle(fontSize: 16),
-              ),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.primary,
-                side: const BorderSide(
-                  color: AppColors.primary,
-                ),
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          SizedBox(
-            width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: (_bytesArchivo != null && !_subiendo)
+              onPressed: (_bytesHermandades != null && _bytesInfopasos != null && !_subiendo)
                   ? _subirCsv
                   : null,
               icon: _subiendo
@@ -500,7 +472,7 @@ class _AdminScreenState extends State<AdminScreen>
                     )
                   : const Icon(Icons.cloud_upload, color: Colors.white),
               label: Text(
-                _subiendo ? 'Subiendo...' : 'Subir CSV',
+                _subiendo ? 'Subiendo...' : 'Reemplazar datos con ambos CSV',
                 style: const TextStyle(fontSize: 16, color: Colors.white),
               ),
               style: ElevatedButton.styleFrom(

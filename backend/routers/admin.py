@@ -66,51 +66,30 @@ def actualizar_fechas_desde_inicio(
         dias_actualizados=len(dias_ordenados),
     )
 
-@router.post("/upload-infopasos", response_model=schemas.CargarInfoPasosResponse)
-async def upload_infopasos(
-    file: UploadFile = File(...),
+@router.post("/upload-catalogo", response_model=schemas.CargarCatalogoResponse)
+async def upload_catalogo(
+    hermandades: UploadFile = File(...),
+    infopasos: UploadFile = File(...),
     admin: models.Usuario = Depends(obtener_admin_actual),
     db: Session = Depends(get_db),
 ):
-    csv_text = await _read_csv_upload(file)
+    hermandades_csv = await _read_csv_upload(hermandades)
+    infopasos_csv = await _read_csv_upload(infopasos)
 
     try:
-        crud.clear_infopasos(db)
-        total = crud.load_infopasos_from_csv(db, csv_text)
+        total_hermandades, total_infopasos = crud.load_catalogo_from_csv(
+            db, hermandades_csv, infopasos_csv,
+        )
         db.commit()
     except ValueError as e:
         db.rollback()
         raise HTTPException(status_code=400, detail=str(e))
     except Exception:
         db.rollback()
-        raise HTTPException(status_code=500, detail="No se pudo cargar el archivo CSV")
+        raise HTTPException(status_code=500, detail="No se pudo completar la carga del catálogo")
 
-    return schemas.CargarInfoPasosResponse(
-        mensaje=f"Se cargaron {total} registros correctamente",
-        registros_cargados=total,
-    )
-
-
-@router.post("/upload-hermandades", response_model=schemas.CargarHermandadesResponse)
-async def upload_hermandades(
-    file: UploadFile = File(...),
-    admin: models.Usuario = Depends(obtener_admin_actual),
-    db: Session = Depends(get_db),
-):
-    csv_text = await _read_csv_upload(file)
-
-    try:
-        crud.clear_hermandades(db)
-        total = crud.load_hermandades_from_csv(db, csv_text)
-        db.commit()
-    except ValueError as e:
-        db.rollback()
-        raise HTTPException(status_code=400, detail=str(e))
-    except Exception:
-        db.rollback()
-        raise HTTPException(status_code=500, detail="No se pudo cargar el archivo CSV")
-
-    return schemas.CargarHermandadesResponse(
-        mensaje=f"Se cargaron {total} hermandades correctamente",
-        registros_cargados=total,
+    return schemas.CargarCatalogoResponse(
+        mensaje=f"Se cargaron {total_hermandades} hermandades y {total_infopasos} infopasos correctamente",
+        hermandades_cargadas=total_hermandades,
+        infopasos_cargados=total_infopasos,
     )

@@ -399,7 +399,7 @@ def clear_hermandades(db: Session) -> int:
     db.query(models.Hermandad).delete()
     return count
 
-def load_hermandades_from_csv(db: Session, csv_content: str) -> int:
+def leer_hermandades_csv(csv_content: str) -> list[models.Hermandad]:
     
     lines = csv_content.strip().split("\n")
     if len(lines) < 2:
@@ -453,20 +453,28 @@ def load_hermandades_from_csv(db: Session, csv_content: str) -> int:
         )
         registros.append(hermandad)
     
-    db.add_all(registros)
-    return len(registros)
+    if not registros:
+        raise ValueError("El CSV de hermandades no contiene registros")
+    ids = [registro.id for registro in registros]
+    if len(ids) != len(set(ids)):
+        raise ValueError("El CSV de hermandades contiene IDs duplicados")
+    return registros
 
 
-#Admin-InfoPasos
-def clear_infopasos(db: Session) -> int:
-    db.query(models.DiaItinerario).delete()
-    db.query(models.ItemItinerario).delete()
-    
-    count = db.query(models.InfoPaso).count()
-    db.query(models.InfoPaso).delete()
-    return count
+def load_catalogo_from_csv(db: Session, hermandades_csv: str, infopasos_csv: str) -> tuple[int, int]:
+    hermandades = leer_hermandades_csv(hermandades_csv)
+    infopasos = leer_infopasos_csv(infopasos_csv)
+    if not infopasos:
+        raise ValueError("El CSV de infopasos no contiene registros")
+    ids_hermandades = {hermandad.id for hermandad in hermandades}
+    if any(entrada['idHermandad'] not in ids_hermandades for entrada in infopasos):
+        raise ValueError("Hay infopasos cuya hermandad no aparece en el CSV de hermandades")
+    ids_dias = {dia.id for dia in db.query(models.Dia).all()}
+    if any(hermandad.idDia not in ids_dias for hermandad in hermandades):
+        raise ValueError("Hay hermandades cuyo día no existe en la base de datos")
 
-def load_infopasos_from_csv(db: Session, csv_content: str) -> int:
-    registros = [models.InfoPaso(**entrada) for entrada in leer_infopasos_csv(csv_content)]
-    db.add_all(registros)
-    return len(registros)
+    clear_hermandades(db)
+    db.add_all(hermandades)
+    db.flush()
+    db.add_all([models.InfoPaso(**entrada) for entrada in infopasos])
+    return len(hermandades), len(infopasos)
